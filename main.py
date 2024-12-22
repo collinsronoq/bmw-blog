@@ -52,8 +52,8 @@ def utility_functions():
         return f"https://www.gravatar.com/avatar/{hash_email}?s={size}&d=identicon"
     return dict(gravatar_url=gravatar_url)
 
-# with app.app_context():
-#     db.create_all()
+with app.app_context():
+    db.create_all()
 
 @login_manager.user_loader
 def load_user(user_id):
