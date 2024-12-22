@@ -1,5 +1,5 @@
 from datetime import date
-from flask import Flask, abort, render_template, redirect, url_for, flash
+from flask import Flask, abort, render_template, redirect, url_for, flash,request
 from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor
 from flask_login import login_user, LoginManager, current_user, logout_user,login_required
@@ -8,12 +8,15 @@ from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db,User,BlogPost,Comments
 from forms import CreatePostForm,RegisterForm,LoginForm,CommentForm
+from smtplib import SMTP
+import os
+from dotenv import load_dotenv
 import hashlib
 
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
@@ -22,10 +25,16 @@ login_manager = LoginManager()
 login_manager.init_app(app) 
 login_manager.login_view = 'login'
 
+# load environment variables
+load_dotenv('.env')
+my_email = os.environ.get('EMAIL')
+my_password = os.environ.get('EMAIL_PASSWORD')
+website_email = os.environ.get('WEBSITE_EMAIL')
+
 # CREATE DATABASE
 # class Base(DeclarativeBase):
 #     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///post2.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL','sqlite:///post2.db')
 db.init_app(app)
 
 
@@ -208,10 +217,26 @@ def about():
     return render_template("about.html")
 
 
-@app.route("/contact")
+@app.route("/contact",methods=['GET','POST'])
 def contact():
-    return render_template("contact.html")
+    if request.method == 'POST':
+        email = request.form['email']
+        phone_number = request.form['phone']
+        name = request.form['name']
+        message = request.form['message']
+        with SMTP("smtp.gmail.com") as connection:
+            connection.starttls()
+            connection.login(user=my_email,password=my_password)
+            connection.sendmail(from_addr=my_email,to_addrs=website_email,
+                                msg=f"Subject:New Message\n\nName: {name},\nEmail: {email},\nPhone: {phone_number},\nMessage: {message}")
+        flash("Message sent successfully",'success')
+        return redirect(url_for('contact',msg_sent=True))
+
+                                
+
+    return render_template("contact.html",msg_sent=False)
 
 
 if __name__ == "__main__":
     app.run(debug=True, port=5002)
+
